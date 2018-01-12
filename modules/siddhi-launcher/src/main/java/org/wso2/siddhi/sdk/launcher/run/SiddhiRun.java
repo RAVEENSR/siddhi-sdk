@@ -22,7 +22,7 @@ import org.wso2.siddhi.core.SiddhiManager;
 import org.wso2.siddhi.sdk.launcher.util.InputFeeder;
 
 /**
- * Handles the run mode for a siddhi app.
+ * Handles the run mode for a siddhi app. This is called when running a siddhi app using command line.
  */
 public class SiddhiRun {
 

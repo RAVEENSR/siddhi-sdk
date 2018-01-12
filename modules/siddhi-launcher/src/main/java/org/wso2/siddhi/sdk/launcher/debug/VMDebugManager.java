@@ -26,6 +26,7 @@ import org.wso2.siddhi.sdk.launcher.debug.dto.CommandDTO;
 import org.wso2.siddhi.sdk.launcher.debug.dto.MessageDTO;
 import org.wso2.siddhi.sdk.launcher.debug.internal.DebugRuntime;
 import org.wso2.siddhi.sdk.launcher.exception.DebugException;
+import org.wso2.siddhi.sdk.launcher.server.VMRunDebugServer;
 import org.wso2.siddhi.sdk.launcher.util.InputFeeder;
 
 import java.io.File;
@@ -40,7 +41,7 @@ public class VMDebugManager {
 
     private static VMDebugManager debugManagerInstance = null;
     private static SiddhiManager siddhiManager = new SiddhiManager();
-    private VMDebugServer debugServer;
+    private VMRunDebugServer debugServer;
     /**
      * Object to hold debug session related context.
      */
@@ -52,7 +53,8 @@ public class VMDebugManager {
      * Instantiates a new Debug manager.
      */
     private VMDebugManager() {
-        debugServer = new VMDebugServer();
+        debugServer = new VMRunDebugServer();
+        debugServer.setDebugMode(true);
         debugSession = new VMDebugSession();
     }
 

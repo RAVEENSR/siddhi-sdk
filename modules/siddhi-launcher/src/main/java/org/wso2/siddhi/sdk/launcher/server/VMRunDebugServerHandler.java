@@ -15,7 +15,7 @@
 *  specific language governing permissions and limitations
 *  under the License.
 */
-package org.wso2.siddhi.sdk.launcher.debug;
+package org.wso2.siddhi.sdk.launcher.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -27,25 +27,46 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.websocketx.*;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
+import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.util.CharsetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.wso2.siddhi.sdk.launcher.debug.DebugConstants;
+import org.wso2.siddhi.sdk.launcher.debug.VMDebugManager;
 import org.wso2.siddhi.sdk.launcher.exception.DebugException;
+import org.wso2.siddhi.sdk.launcher.exception.RunException;
+import org.wso2.siddhi.sdk.launcher.run.RunConstants;
+import org.wso2.siddhi.sdk.launcher.run.VMRunManager;
 
 import java.io.PrintStream;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.HOST;
 import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
- * {@code DebugServerHandler} Handle client connections and messaging with debug clients.
+ * {@code RunDebugServerHandler} Handle client connections and messaging with run or debug clients.
  */
-public class VMDebugServerHandler extends SimpleChannelInboundHandler<Object> {
+public class VMRunDebugServerHandler extends SimpleChannelInboundHandler<Object> {
 
-    private static final Logger logger = LoggerFactory.getLogger(VMDebugServerHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(VMRunDebugServerHandler.class);
+
+    private boolean isDebugMode = false;
+
+    public VMRunDebugServerHandler(boolean isDebugMode) {
+        this.isDebugMode = isDebugMode;
+    }
 
     private WebSocketServerHandshaker handshaker;
 
@@ -66,7 +87,13 @@ public class VMDebugServerHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     private String getWebSocketLocation(FullHttpRequest req) {
-        String location = req.headers().get(HOST) + DebugConstants.DEBUG_WEBSOCKET_PATH;
+        String webSocketPath;
+        if (isDebugMode) {
+            webSocketPath = DebugConstants.DEBUG_WEBSOCKET_PATH;
+        } else {
+            webSocketPath = RunConstants.RUN_WEBSOCKET_PATH;
+        }
+        String location = req.headers().get(HOST) + webSocketPath;
         return "ws://" + location;
     }
 
@@ -97,7 +124,8 @@ public class VMDebugServerHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
 
-        if (!DebugConstants.DEBUG_WEBSOCKET_PATH.equals(req.uri())) {
+        if (isDebugMode && !DebugConstants.DEBUG_WEBSOCKET_PATH.equals(req.uri())
+                || !isDebugMode && !RunConstants.RUN_WEBSOCKET_PATH.equals(req.uri())) {
             FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND);
             sendHttpResponse(ctx, req, res);
             return;
@@ -110,13 +138,24 @@ public class VMDebugServerHandler extends SimpleChannelInboundHandler<Object> {
         if (handshaker == null) {
             WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
         } else {
-            VMDebugManager debugManager = VMDebugManager.getInstance();
-            try {
-                debugManager.addDebugSession(ctx.channel());
-            } catch (DebugException e) {
-                FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, TOO_MANY_REQUESTS);
-                sendHttpResponse(ctx, req, res);
-                return;
+            if (isDebugMode) {
+                VMDebugManager debugManager = VMDebugManager.getInstance();
+                try {
+                    debugManager.addDebugSession(ctx.channel());
+                } catch (DebugException e) {
+                    FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, TOO_MANY_REQUESTS);
+                    sendHttpResponse(ctx, req, res);
+                    return;
+                }
+            } else {
+                VMRunManager runManager = VMRunManager.getInstance();
+                try {
+                    runManager.addRunSession(ctx.channel());
+                } catch (RunException e) {
+                    FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, TOO_MANY_REQUESTS);
+                    sendHttpResponse(ctx, req, res);
+                    return;
+                }
             }
             handshaker.handshake(ctx.channel(), req);
         }
@@ -134,13 +173,23 @@ public class VMDebugServerHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
         if (!(frame instanceof TextWebSocketFrame)) {
-            throw new DebugException(String.format("%s frame types not supported", frame.getClass()
-                    .getName()));
+            if (isDebugMode) {
+                throw new DebugException(String.format("%s frame types not supported", frame.getClass()
+                        .getName()));
+            } else {
+                throw new RunException(String.format("%s frame types not supported", frame.getClass()
+                        .getName()));
+            }
         }
 
         String request = ((TextWebSocketFrame) frame).text();
-        VMDebugManager debugManager = VMDebugManager.getInstance();
-        debugManager.processDebugCommand(request);
+        if (isDebugMode) {
+            VMDebugManager debugManager = VMDebugManager.getInstance();
+            debugManager.processDebugCommand(request);
+        } else {
+            VMRunManager runManager = VMRunManager.getInstance();
+            runManager.processRunCommand(request);
+        }
     }
 
     @Override
@@ -148,10 +197,16 @@ public class VMDebugServerHandler extends SimpleChannelInboundHandler<Object> {
         ctx.close();
         //notify the user about the error.
         PrintStream out = System.out;
-        out.println(DebugConstants.DEBUG_SERVER_ERROR);
+        String errorMessage;
+        if (isDebugMode) {
+            errorMessage = DebugConstants.DEBUG_SERVER_ERROR;
+        } else {
+            errorMessage = RunConstants.RUN_SERVER_ERROR;
+        }
+        out.println(errorMessage);
         //log the cause in log file.
         if (logger.isDebugEnabled()) {
-            logger.debug(DebugConstants.DEBUG_SERVER_ERROR, cause);
+            logger.debug(errorMessage, cause);
         }
     }
 }

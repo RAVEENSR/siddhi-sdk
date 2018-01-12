@@ -25,4 +25,7 @@ public class Constants {
 
     // Name of the system property to hold the debug port
     public static final String SYSTEM_PROP_SIDDHI_DEBUG = "siddhi.debug";
+
+    // Name of the system property to hold the run port
+    public static final String SYSTEM_PROP_SIDDHI_RUN = "siddhi.run";
 }

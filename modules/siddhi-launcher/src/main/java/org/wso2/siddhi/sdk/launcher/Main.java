@@ -108,9 +108,13 @@ public class Main {
         @Parameter(names = "--siddhi.debug", hidden = true, description = "remote debugging port")
         private String siddhiDebugPort;
 
+        @Parameter(names = "--siddhi.run", hidden = true, description = "run port")
+        private String siddhiRunPort;
+
         @Override
         public void execute() {
             boolean debugMode = false;
+            boolean runWithSingleEventSimulation = false;
             if (argList == null || argList.size() == 0) {
                 throw new RuntimeException("No Siddhi app provided");
             }
@@ -118,6 +122,11 @@ public class Main {
             if (siddhiDebugPort != null) {
                 System.setProperty(Constants.SYSTEM_PROP_SIDDHI_DEBUG, siddhiDebugPort);
                 debugMode = true;
+            }
+            // Enable run mode with single event simulation
+            if (siddhiRunPort != null) {
+                System.setProperty(Constants.SYSTEM_PROP_SIDDHI_RUN, siddhiRunPort);
+                runWithSingleEventSimulation = true;
             }
             // Filter out the list of arguments given to the siddhi program.
             String[] programArgs;
@@ -127,7 +136,7 @@ public class Main {
             } else {
                 programArgs = new String[0];
             }
-            LauncherUtils.runProgram(debugMode, programArgs);
+            LauncherUtils.runProgram(debugMode, runWithSingleEventSimulation, programArgs);
         }
     }
 }

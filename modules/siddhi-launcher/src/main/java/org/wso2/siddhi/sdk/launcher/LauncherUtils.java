@@ -24,6 +24,7 @@ import org.wso2.siddhi.sdk.launcher.debug.VMDebugManager;
 import org.wso2.siddhi.sdk.launcher.exception.FileReadException;
 import org.wso2.siddhi.sdk.launcher.exception.SLauncherException;
 import org.wso2.siddhi.sdk.launcher.run.SiddhiRun;
+import org.wso2.siddhi.sdk.launcher.run.VMRunManager;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -38,7 +39,7 @@ public class LauncherUtils {
 
     private static final Logger log = Logger.getLogger(LauncherUtils.class);
 
-    public static void runProgram(boolean isDebugEnabled, String[] args) {
+    public static void runProgram(boolean isDebugEnabled, boolean runWithSingleEventSimulation, String[] args) {
 
         if (args.length == 0 || args[0] == null) {
             throw new FileReadException("No Siddhi App file Path given");
@@ -61,11 +62,17 @@ public class LauncherUtils {
 
         if (!siddhiApp.equals("")) {
             if (!isDebugEnabled) {
-                try {
-                    SiddhiRun siddhiRun = new SiddhiRun();
-                    siddhiRun.runSiddhi(siddhiApp, inputFile);
-                } catch (InterruptedException e) {
-                    throw new FileReadException("Siddhi App execution error: " + e);
+                if (runWithSingleEventSimulation) {
+                    VMRunManager vmRunManager = VMRunManager.getInstance();
+                    vmRunManager.mainInit(siddhiAppPath, siddhiApp, inputFile);
+                } else {
+                    // This will be called to run siddhi files using command line
+                    try {
+                        SiddhiRun siddhiRun = new SiddhiRun();
+                        siddhiRun.runSiddhi(siddhiApp, inputFile);
+                    } catch (InterruptedException e) {
+                        throw new FileReadException("Siddhi App execution error: " + e);
+                    }
                 }
             } else {
                 VMDebugManager vmDebugManager = VMDebugManager.getInstance();

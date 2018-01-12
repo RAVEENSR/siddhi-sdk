@@ -16,41 +16,35 @@
 *  under the License.
 */
 
-package org.wso2.siddhi.sdk.launcher.debug;
+package org.wso2.siddhi.sdk.launcher.run;
 
 /**
  * {@code DebugConstants} define debugger constants.
  */
-public class DebugConstants {
+public class RunConstants {
 
     // commands sent by client
     public static final String CMD_START = "START";
     public static final String CMD_STOP = "STOP";
-    public static final String CMD_SET_POINTS = "SET_POINTS";
-    public static final String CMD_STEP_OVER = "STEP_OVER";
-    public static final String CMD_RESUME = "RESUME";
-    public static final String CMD_REMOVE_BREAKPOINT = "REMOVE_BREAKPOINT";
 
     // messages sent back to client
-    public static final String CODE_HIT = "DEBUG_HIT";
-    public static final String MSG_HIT = "Debug point hit.";
     public static final String CODE_INVALID = "INVALID";
     public static final String MSG_INVALID = "Invalid Command";
     public static final String CODE_ACK = "ACK";
     public static final String CODE_COMPLETE = "COMPLETE";
-    public static final String MSG_COMPLETE = "Debug session completed.";
+    public static final String MSG_COMPLETE = "Run session completed.";
     public static final String CODE_EXIT = "EXIT";
-    public static final String MSG_EXIT = "Exiting from debugger.";
+    public static final String MSG_EXIT = "Exiting from runner.";
 
     //startup message.
-    public static final String DEBUG_MESSAGE = "Siddhi remote debugger is activated on port : ";
+    public static final String RUN_MESSAGE = "Siddhi runner server is activated on port : ";
     public static final String ERROR_JSON = "{ \"error\": true }";
-    public static final String DEBUG_SERVER_ERROR = "Debug Server Error. Closing client connection.";
+    public static final String RUN_SERVER_ERROR = "Runner Server Error. Closing client connection.";
     public static final String CMD_SEND_EVENT = "SEND_EVENT";
 
-    //default debugger port where websocket server will listen
-    public static final String DEFAULT_DEBUG_PORT = "5006";
+    //default run port where websocket server will listen
+    public static final String DEFAULT_RUN_PORT = "5006";
 
-    //debugger web-socket path.
-    public static final String DEBUG_WEBSOCKET_PATH = "/debug";
+    //runner web-socket path.
+    public static final String RUN_WEBSOCKET_PATH = "/run";
 }
